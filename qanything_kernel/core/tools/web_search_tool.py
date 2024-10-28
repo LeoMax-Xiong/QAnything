@@ -33,9 +33,9 @@ class WebSearchInput(BaseModel):
     query: str = Field(..., description=f"search query")
 
 
-def duckduckgo_search(query: str):
+def duckduckgo_search(query: str, top_k: int):
 
-    results = api_wrapper.results(query, max_results=3)
+    results = api_wrapper.results(query, max_results=top_k)
     #print(results)
     urls = [res["link"] for res in results]
     #loader = AsyncChromiumLoader(urls)
@@ -77,5 +77,5 @@ college_tool = {"type":"function", "function": functions[0]}
 search_tools.append(college_tool)
 
 if __name__ == "__main__":
-    result = duckduckgo_search("985大学有哪些?")
+    result = duckduckgo_search("985大学有哪些?", top_k=3)
     print(result)

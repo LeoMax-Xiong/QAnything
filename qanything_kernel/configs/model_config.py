@@ -1,156 +1,184 @@
 import os
-import nltk
-import platform
-import config
 from dotenv import load_dotenv
+
 load_dotenv()
-
-os_system = platform.system()
-
-#### 用户配置区 ####
-# 默认的CUDA设备
-CUDA_DEVICE = '0'
-# 设置是否使用快速PDF解析器，设置为False时，使用优化后的PDF解析器，但速度下降
-USE_FAST_PDF_PARSER = config.pdf_config['USE_FAST_PDF_PARSER']
-# 设置rerank的batch大小，16GB内存建议设置为8，32GB内存建议设置为16
-LOCAL_RERANK_BATCH = config.user_defined_configuration['LOCAL_RERANK_BATCH']
-# 设置rerank的多线程worker数量，默认设置为4，根据机器性能调整
-LOCAL_RERANK_WORKERS = config.user_defined_configuration['LOCAL_RERANK_WORKERS']
-# 设置embed的batch大小，16GB内存建议设置为8，32GB内存建议设置为16
-LOCAL_EMBED_BATCH = config.user_defined_configuration['LOCAL_EMBED_BATCH']
-# 设置embed的多线程worker数量，默认设置为4，根据机器性能调整
-LOCAL_EMBED_WORKERS = config.user_defined_configuration['LOCAL_EMBED_WORKERS']
-#### 用户配置区 ####
-
+# 获取环境变量GATEWAY_IP
+GATEWAY_IP = os.getenv("GATEWAY_IP", "localhost")
+# LOG_FORMAT = "%(levelname) -5s %(asctime)s" "-1d: %(message)s"
+# logger = logging.getLogger()
+# logger.setLevel(logging.INFO)
+# logging.basicConfig(format=LOG_FORMAT)
 # 获取项目根目录
 # 获取当前脚本的绝对路径
 current_script_path = os.path.abspath(__file__)
 root_path = os.path.dirname(os.path.dirname(os.path.dirname(current_script_path)))
 UPLOAD_ROOT_PATH = os.path.join(root_path, "QANY_DB", "content")
-print("LOCAL DATA PATH:", UPLOAD_ROOT_PATH)
-# 如果不存在则创建
-if not os.path.exists(UPLOAD_ROOT_PATH):
-    os.makedirs(UPLOAD_ROOT_PATH)
-PDF_MODEL_PATH = os.path.join(root_path, "qanything_kernel/utils/loader/pdf_to_markdown")
-
-nltk_data_path = os.path.join(root_path, 'qanything_kernel/nltk_data')
-
-# 将你的本地路径添加到nltk的数据路径中
-nltk.data.path.append(nltk_data_path)
-
+IMAGES_ROOT_PATH = os.path.join(root_path, "qanything_kernel/qanything_server/dist/qanything/assets", "file_images")
+print("UPLOAD_ROOT_PATH:", UPLOAD_ROOT_PATH)
+print("IMAGES_ROOT_PATH:", IMAGES_ROOT_PATH)
 OCR_MODEL_PATH = os.path.join(root_path, "qanything_kernel", "dependent_server", "ocr_server", "ocr_models")
+RERANK_MODEL_PATH = os.path.join(root_path, "qanything_kernel", "dependent_server", "rerank_server", "rerank_models")
+EMBED_MODEL_PATH = os.path.join(root_path, "qanything_kernel", "dependent_server", "embed_server", "embed_models")
+PDF_MODEL_PATH = os.path.join(root_path, "qanything_kernel/dependent_server/pdf_parser_server/pdf_to_markdown")
 
 # LLM streaming reponse
 STREAMING = True
 
-PROMPT_TEMPLATE = """参考信息：
-{context}
----
-我的问题或指令：
-{question}
----
-请根据上述参考信息回答我的问题或回复我的指令。前面的参考信息可能有用，也可能没用，你需要从我给出的参考信息中选出与我的问题最相关的那些，来为你的回答提供依据。回答一定要忠于原文，简洁但不丢信息，不要胡乱编造。我的问题或指令是什么语种，你就用什么语种回复,
-你的回复："""
+SYSTEM = """
+You are a helpful assistant. 
+You are always a reliable assistant that can answer questions with the help of external documents.
+Today's date is {{today_date}}. The current time is {{current_time}}.
+"""
 
-# For LLM Chat w/o Retrieval context 
-# PROMPT_TEMPLATE = """{question}"""
+INSTRUCTIONS = """
+- Answer the question strictly based on the reference information provided between <DOCUMENTS> and </DOCUMENTS>. 
+- Do not attempt to modify or adapt unrelated information. If the reference information does not match the person or topic mentioned in the question, respond only with: \"抱歉，检索到的参考信息并未提供任何相关的信息，因此无法回答。\"
+- Before generating the answer, please confirm the following (Let's think step by step):
+    1. First, check if the reference information directly matches the person or topic mentioned in the question. If no match is found, immediately return: \"抱歉，检索到的参考信息并未提供任何相关的信息，因此无法回答。\"
+    2. If a match is found, ensure all required key points or pieces of information from the reference are addressed in the answer.
+- Now, answer the following question based on the above retrieved documents:
+{{question}}
+- Please format your response in a **logical and structured manner** that best fits the question. Follow these guidelines:
 
-QUERY_PROMPT_TEMPLATE = """{question}"""
+    1. **Start with a concise and direct answer to the main question**.
+    
+    2. **If necessary, provide additional details** in a structured format:
+       - Use **appropriate multi-level headings (##, ###, ####)** to separate different parts or aspects of the answer.
+       - **Use bullet points (-, *) or numbered lists (1., 2., 3.)** if multiple points need to be highlighted.
+       - **Highlight key information using bold or italic text** where necessary.
+    
+    3. **Tailor the format to the nature of the question**. For example:
+       - If the question involves a list or comparison, use bullet points or tables.
+       - If the question requires a more narrative answer, structure the response into clear paragraphs.
+
+    4. **Avoid unnecessary or irrelevant sections**. Focus solely on presenting the required information in a clear, concise, and well-structured manner.
+- Respond in the same language as the question "{{question}}".
+"""
+"""
+- Please format your response in Markdown with a clear and complete structure:
+    1. **Introduction**: Briefly and directly answer the main question.
+    2. **Detailed Explanation** (if more relevant details are available):
+       - Use **second-level headings (##)** to separate different parts or aspects of the answer.
+       - Use **ordered lists** (1., 2.,3.) or **unordered lists** (-, *) to list multiple points or steps.
+       - Highlight key information using **bold** or *italic* text where appropriate.
+       - If the answer is extensive, conclude with a **brief summary**.
+    3. **Notes**:
+       - Respond in the **same language** as the question "{{question}}".
+       - Avoid including irrelevant information; ensure the answer is related to the retrieved reference information.
+       - Ensure the answer is well-structured and easy to understand.
+"""
+
+PROMPT_TEMPLATE = """
+<SYSTEM>
+{{system}}
+</SYSTEM>
+
+<INSTRUCTIONS>
+{{instructions}}
+</INSTRUCTIONS>
+
+<DOCUMENTS>
+{{context}}
+</DOCUMENTS>
+"""
+
+CUSTOM_PROMPT_TEMPLATE = """
+<USER_INSTRUCTIONS>
+{{custom_prompt}}
+</USER_INSTRUCTIONS>
+
+<DOCUMENTS>
+{{context}}
+</DOCUMENTS>
+
+<INSTRUCTIONS>
+- All contents between <DOCUMENTS> and </DOCUMENTS> are reference information retrieved from an external knowledge base.
+- Now, answer the following question based on the above retrieved documents(Let's think step by step):
+{{question}}
+</INSTRUCTIONS>
+"""
+
+
+SIMPLE_PROMPT_TEMPLATE = """
+- You are a helpful assistant. You can help me by answering my questions. You can also ask me questions.
+- Today's date is {{today}}. The current time is {{now}}.
+- User's custom instructions: {{custom_prompt}}
+- Before answering, confirm the number of key points or pieces of information required, ensuring nothing is overlooked.
+- Now, answer the following question:
+{{question}}
+Return your answer in Markdown formatting, and in the same language as the question "{{question}}". 
+"""
+
+# 缓存知识库数量
+CACHED_VS_NUM = 100
 
 # 文本分句长度
-SENTENCE_SIZE = config.model_config['SENTENCE_SIZE']
-
-# 匹配后单段上下文长度
-CHUNK_SIZE = config.model_config['CHUNK_SIZE']
-
-# 传入LLM的历史记录长度
-# 看起来暂时是没有用的
-# LLM_HISTORY_LEN = 3
+SENTENCE_SIZE = 100
 
 # 知识库检索时返回的匹配内容条数
-VECTOR_SEARCH_TOP_K = config.model_config['VECTOR_SEARCH_TOP_K']
+VECTOR_SEARCH_TOP_K = 30
 
-# embedding检索的相似度阈值，归一化后的L2距离，设置越大，召回越多，设置越小，召回越少
-VECTOR_SEARCH_SCORE_THRESHOLD = config.model_config['VECTOR_SEARCH_SCORE_THRESHOLD']
+VECTOR_SEARCH_SCORE_THRESHOLD = 0.3
 
-# NLTK_DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "nltk_data")
-# print('NLTK_DATA_PATH', NLTK_DATA_PATH)
+KB_SUFFIX = '_240625'
+# MILVUS_HOST_LOCAL = 'milvus-standalone-local'
+# MILVUS_PORT = 19530
+MILVUS_HOST_LOCAL = GATEWAY_IP
+MILVUS_PORT = 19540
+MILVUS_COLLECTION_NAME = 'qanything_collection' + KB_SUFFIX
 
-# 是否开启中文标题加强，以及标题增强的相关配置
-# 通过增加标题判断，判断哪些文本为标题，并在metadata中进行标记；
-# 然后将文本与往上一级的标题进行拼合，实现文本信息的增强。
-ZH_TITLE_ENHANCE = False
+# ES_URL = 'http://es-container-local:9200/'
+ES_URL = f'http://{GATEWAY_IP}:9210/'
+ES_USER = None
+ES_PASSWORD = None
+ES_TOP_K = 30
+ES_INDEX_NAME = 'qanything_es_index' + KB_SUFFIX
 
-# MILVUS向量数据库地址
-MILVUS_HOST_LOCAL = '0.0.0.0'
-MILVUS_HOST_ONLINE = '0.0.0.0'
-MILVUS_PORT = 19530
-MILVUS_USER = ''
-MILVUS_PASSWORD = ''
-MILVUS_DB_NAME = ''
+# MYSQL_HOST_LOCAL = 'mysql-container-local'
+# MYSQL_PORT_LOCAL = 3306
+MYSQL_HOST_LOCAL = GATEWAY_IP
+MYSQL_PORT_LOCAL = 3316
+MYSQL_USER_LOCAL = 'root'
+MYSQL_PASSWORD_LOCAL = '123456'
+MYSQL_DATABASE_LOCAL = 'qanything'
 
-SQLITE_DATABASE = os.path.join(root_path, "QANY_DB", "qanything.db")
-MILVUS_LITE_LOCATION = os.path.join(root_path, "QANY_DB", "milvus")
-FAISS_LOCATION = os.path.join(root_path, "QANY_DB", "faiss")
-FAISS_INDEX_FILE_PATH = os.path.join(FAISS_LOCATION, "faiss_index.idx")
-FAISS_INDEX_LOCAL_PATH = os.path.join(FAISS_LOCATION, "local_file")
-# 缓存知识库数量
-FAISS_CACHE_SIZE = 10
+LOCAL_OCR_SERVICE_URL = "localhost:7001"
 
-# llm_api_serve_model = os.getenv('LLM_API_SERVE_MODEL', 'MiniChat-2-3B')
-# llm_api_serve_port = os.getenv('LLM_API_SERVE_PORT', 7802)
+LOCAL_PDF_PARSER_SERVICE_URL = "localhost:9009"
 
-# LOCAL_LLM_SERVICE_URL = f"localhost:{llm_api_serve_port}"
-# LOCAL_LLM_MODEL_NAME = llm_api_serve_model
-# LOCAL_LLM_MAX_LENGTH = 4096
-
-LOCAL_RERANK_PATH = os.path.join(root_path, 'qanything_kernel/connector/rerank', 'rerank_model_configs_v0.0.1')
-if os_system == 'Darwin':
-    LOCAL_RERANK_REPO = "maidalun/bce-reranker-base_v1"
-    LOCAL_RERANK_MODEL_PATH = os.path.join(LOCAL_RERANK_PATH, "pytorch_model.bin")
-else:
-    LOCAL_RERANK_REPO = "netease-youdao/bce-reranker-base_v1"
-    LOCAL_RERANK_MODEL_PATH = os.path.join(LOCAL_RERANK_PATH, "rerank.onnx")
-print('LOCAL_RERANK_REPO:', LOCAL_RERANK_REPO)
+LOCAL_RERANK_SERVICE_URL = "localhost:8001"
 LOCAL_RERANK_MODEL_NAME = 'rerank'
 LOCAL_RERANK_MAX_LENGTH = 512
+LOCAL_RERANK_BATCH = 1
+LOCAL_RERANK_THREADS = 1
+LOCAL_RERANK_PATH = os.path.join(root_path, 'qanything_kernel/dependent_server/rerank_server', 'rerank_model_configs_v0.0.1')
+LOCAL_RERANK_MODEL_PATH = os.path.join(LOCAL_RERANK_PATH, "rerank.onnx")
 
-LOCAL_EMBED_PATH = os.path.join(root_path, 'qanything_kernel/connector/embedding', 'embedding_model_configs_v0.0.1')
-if os_system == 'Darwin':
-    LOCAL_EMBED_REPO = "maidalun/bce-embedding-base_v1"
-    LOCAL_EMBED_MODEL_PATH = os.path.join(LOCAL_EMBED_PATH, "pytorch_model.bin")
-else:
-    LOCAL_EMBED_REPO = "netease-youdao/bce-embedding-base_v1"
-    LOCAL_EMBED_MODEL_PATH = os.path.join(LOCAL_EMBED_PATH, "embed.onnx")
-print('LOCAL_EMBED_REPO:', LOCAL_EMBED_REPO)
+LOCAL_EMBED_SERVICE_URL = "localhost:9001"
 LOCAL_EMBED_MODEL_NAME = 'embed'
 LOCAL_EMBED_MAX_LENGTH = 512
+LOCAL_EMBED_BATCH = 1
+LOCAL_EMBED_THREADS = 1
+LOCAL_EMBED_PATH = os.path.join(root_path, 'qanything_kernel/dependent_server/embedding_server', 'embedding_model_configs_v0.0.1')
+LOCAL_EMBED_MODEL_PATH = os.path.join(LOCAL_EMBED_PATH, "embed.onnx")
 
-# VLLM PARAMS
-model_path = os.path.join(root_path, "assets", "custom_models")
-# 检查目录是否存在，如果不存在则创建
-if not os.path.exists(model_path):
-    os.makedirs(model_path)
-if os_system == 'Darwin':
-    DT_3B_MODEL_PATH = os.path.join(model_path, "netease-youdao/MiniChat-2-3B-FP16-GGUF") + '/MiniChat-2-3B-fp16.gguf'
-    DT_3B_DOWNLOAD_PARAMS = {'model_id': 'netease-youdao/MiniChat-2-3B-FP16-GGUF',
-                             'revision': 'master', 'cache_dir': model_path}
-    # DT_3B_MODEL_PATH = os.path.join(model_path, "netease-youdao/MiniChat-2-3B-INT8-GGUF") + '/MiniChat-2-3B-int8.gguf'
-    # DT_3B_DOWNLOAD_PARAMS = {'model_id': 'netease-youdao/MiniChat-2-3B-INT8-GGUF',
-    #                          'revision': 'master', 'cache_dir': model_path}
-    DT_CONV_3B_TEMPLATE = "minichat"
-    DT_7B_MODEL_PATH = ''
-    DT_7B_DOWNLOAD_PARAMS = {}  # Qwen-7B-QAnything使用llama-cpp-python运行存在问题，暂时不支持
-    DT_CONV_7B_TEMPLATE = "qwen-7b-qanything"
-else:
-    DT_3B_MODEL_PATH = os.path.join(model_path, "netease-youdao/MiniChat-2-3B")
-    DT_7B_MODEL_PATH = os.path.join(model_path, "netease-youdao/Qwen-7B-QAnything")
-    DT_3B_DOWNLOAD_PARAMS = {'model_id': 'netease-youdao/MiniChat-2-3B',
-                             'revision': 'master', 'cache_dir': model_path}
-    DT_7B_DOWNLOAD_PARAMS = {'model_id': 'netease-youdao/Qwen-7B-QAnything',
-                             'revision': 'master', 'cache_dir': model_path}
-    DT_CONV_3B_TEMPLATE = "minichat"
-    DT_CONV_7B_TEMPLATE = "qwen-7b-qanything"
+TOKENIZER_PATH = os.path.join(root_path, 'qanything_kernel/connector/llm/tokenizer_files')
+
+DEFAULT_CHILD_CHUNK_SIZE = 400
+DEFAULT_PARENT_CHUNK_SIZE = 800
+SEPARATORS = ["\n\n", "\n", "。", "，", ",", ".", ""]
+MAX_CHARS = 1000000  # 单个文件最大字符数，超过此字符数将上传失败，改大可能会导致解析超时
+
+# llm_config = {
+#     # 回答的最大token数，一般来说对于国内模型一个中文不到1个token，国外模型一个中文1.5-2个token
+#     "max_token": 512,
+#     # 附带的上下文数目
+#     "history_len": 2,
+#     # 总共的token数，如果遇到电脑显存不够的情况可以将此数字改小，如果低于3000仍然无法使用，就更换模型
+#     "token_window": 4096,
+#     # 如果报错显示top_p值必须在0到1，可以在这里修改
+#     "top_p": 1.0
+# }
 
 # Bot
 BOT_DESC = "一个简单的问答机器人"

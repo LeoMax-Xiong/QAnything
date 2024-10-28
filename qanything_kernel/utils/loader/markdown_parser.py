@@ -1,7 +1,7 @@
 import random
 from langchain.schema.document import Document
 import re
-
+# import json
 RANDOM_NUMBER_SET = set()
 
 
@@ -63,14 +63,19 @@ def _init_node(node_type, title, id_len=4):
 
 def _get_content_dfs(item):
     def dfs_child(child, lines):
-        if 'children' in child:
-            for c in child['children']:
-                dfs_child(c, lines)
+        if child['type'] == 'image':
+            if 'title' in child['attrs']:
+                lines.append("![figure]" + '(' + child['attrs']['url'] + ' ' + child['attrs']['title'] + ' ' + ')')
+            else:
+                lines.append("![figure]" + '(' + child['attrs']['url']+ ')')
         else:
-            if 'raw' in child:
-                lines.append(child['raw'])
+            if 'children' in child:
+                for c in child['children']:
+                    dfs_child(c, lines)
+            else:
+                if 'raw' in child:
+                    lines.append(child['raw'])
         return lines
-
     text_lines = dfs_child(item, [])
     content = '\n'.join(text_lines) + '\n'
 
@@ -186,6 +191,7 @@ def parse_markdown_mistune(file_path, doc_title=None, max_heading_depth=2):
     mistune_parser = mistune.Markdown()
     document = mistune_parser.parse(markdown_content)
     print('Markdown parsing done.')
+
     document, level_offset, max_depth = _get_heading_level_offset(document)
     if max_heading_depth is None or max_heading_depth <= 0:
         max_heading_depth = max_depth
@@ -230,22 +236,46 @@ def _convert_to_node_lists_dfs(parsing_json):
 
 
 def convert_node_to_document(node_lists):
+    def update_child_titles(child_id_list, title):
+        for k, v in node_lists.items():
+            for idx, item in enumerate(v):
+                if item['node_id'] in child_id_list:
+                    item['title'] = title + ['文字内容']
+
+    # 处理没有子节点的node，把下一个节点当成子节点给它
+    for k, v in node_lists.items():
+        for idx, item in enumerate(v):
+            if item['node_type'].startswith('Level'):
+                if len(item['child_id_list']) == 0:  # 是一个单独的标题，并且没有子节点，可能是markdown解析出现了问题
+                    if idx + 1 < len(v) and v[idx + 1]['node_type'] == item['node_type']:
+                        item['child_id_list'].append(v[idx + 1]['node_id'])
+                        tail = v[idx + 1]['title'].pop(-1)
+                        for title in item['title']:
+                            if title not in v[idx + 1]['title']:
+                                v[idx + 1]['title'].append(title)
+                        v[idx + 1]['title'].append(tail)
+                        update_child_titles(v[idx + 1]['child_id_list'], v[idx + 1]['title'])
+    # print("node_lists:", node_lists)
     doc_lst = []
     for k, v in node_lists.items():
-        for item in v:
+        for idx, item in enumerate(v):
             if item['node_type'].startswith('Level'):
                 if len(item['child_id_list']) == 0:  #是一个单独的标题，并且没有子节点，可能是markdown解析出现了问题
-                    title_lst = []
+                    # title_lst = []
+                    # for index, title in enumerate(item['title']):
+                    #     title_lst.append('#' * (index + 1) + ' ' + title)
+                    # doc = Document(page_content='', metadata={'title_lst': title_lst, 'has_table': False})
+                    tmp_content = ''
                     for index, title in enumerate(item['title']):
-                        title_lst.append('#' * (index + 1) + ' ' + title)
-                    doc = Document(page_content='', metadata={'title_lst': title_lst, 'has_table': False})
+                        tmp_content += '#' * (index + 1) + ' ' + title + '\n'
+                    doc = Document(page_content=tmp_content, metadata={'title_lst': [], 'has_table': False, 'page_id': k})
                     doc_lst.append(doc)
             if item['node_type'] == 'ContentNode':
                 title_lst = []
                 for index, title in enumerate(item['title'][:-1]):
                     title_lst.append('#' * (index + 1) + ' ' + title)
                 has_table = contains_table(item['content'])
-                doc = Document(page_content=item['content'], metadata={'title_lst': title_lst, 'has_table': has_table})
+                doc = Document(page_content=item['content'], metadata={'title_lst': title_lst, 'has_table': has_table, 'page_id': k})
                 doc_lst.append(doc)
     return doc_lst
 
@@ -253,11 +283,12 @@ def convert_node_to_document(node_lists):
 def convert_markdown_to_langchaindoc(md_file):
     doc_json = parse_markdown_mistune(md_file)
     node_lists = _convert_to_node_lists_dfs([doc_json])
+    # print("node_lists:", node_lists)
     doc_lst = convert_node_to_document(node_lists)
     return doc_lst
 
 
 if __name__ == '__main__':
     doc_lst = convert_markdown_to_langchaindoc(
-        '/ssd8/exec/qinhaibo/code/RAG/release/git/document-layout-parser/results/樊昊天个人简历_1715841225/樊昊天个人简历_md/樊昊天个人简历.md')
+        '/ssd8/exec/qinhaibo/code/RAG/release/git/gitlab/qanything/qanything_kernel/utils/loader/17-如何进行两种数据的叠合透明显示.docx.md')
     print(doc_lst)

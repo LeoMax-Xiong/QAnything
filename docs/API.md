@@ -89,6 +89,21 @@
     - [检索qa日志请求参数（Body）](#检索qa日志请求参数body)
     - [检索qa日志请求示例](#检索qa日志请求示例)
     - [检索qa日志响应示例](#检索qa日志响应示例)
+  - [获取文档完整解析内容（POST）](#获取文档完整解析内容post)
+    - [URL：http://{your_host}:8777/api/local_doc_qa/get_doc_completed](#urlhttpyour_host8777apilocal_doc_qaget_doc_completed)
+    - [获取文档完整解析内容请求参数（Body）](#获取文档完整解析内容请求参数body)
+    - [获取文档完整解析内容请求示例](#获取文档完整解析内容请求示例)
+    - [获取文档完整解析内容响应示例](#获取文档完整解析内容响应示例)
+  - [更新chunks（POST）](#更新chunkspost)
+    - [URL：http://{your_host}:8777/api/local_doc_qa/update_chunks](#urlhttpyour_host8777apilocal_doc_qaupdate_chunks)
+    - [更新chunks请求参数（Body）](#更新chunks请求参数body)
+    - [更新chunks请求示例](#更新chunks请求示例)
+    - [更新chunks响应示例](#更新chunks响应示例)
+  - [获取文件base64（POST）](#获取文件base64post)
+    - [URL：http://{your_host}:8777/api/local_doc_qa/get_file_base64](#urlhttpyour_host8777apilocal_doc_qaget_file_base64)
+    - [获取文件base64请求参数（Body）](#获取文件base64请求参数body)
+    - [获取文件base64请求示例](#获取文件base64请求示例)
+    - [获取文件base64响应示例](#获取文件base64响应示例)
 
 ## <h2><p id="全局参数">全局参数</p></h2>
 
@@ -106,10 +121,12 @@ user_id 需要满足： 以字母开头，只允许包含字母，数字或下�
 
 ### <h3><p id="新建知识库请求参数body">新建知识库请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值 | 是否必填 | 参数类型 | 描述说明                                |
-| ------- | ---------- | -------- | -------- | --------------------------------------- |
-| user_id | "zzp"      | 是       | String   | 用户 id （如需使用前端填 zzp 不要更换） |
-| kb_name | "kb_test"  | 是       | String   | 知识库名称 （可以随意指定）             |
+| 参数名     | 示例参数值                                           | 是否必填 | 参数类型   | 描述说明                     |
+| ------- | ----------------------------------------------- | ---- | ------ | ------------------------ |
+| user_id | "zzp"                                           | 是    | String | 用户 id （如需使用前端填 zzp 不要更换） |
+| kb_name | "kb_test"                                       | 是    | String | 知识库名称 （可以随意指定）           |
+| kb_id   | "KB698428590b1e45108b63b943fac16559_240430_FAQ" | 否    | String | 指定知识库id，通常用于生成FAQ知识库     |
+| quick   | False                                           | 否    | Bool   | 是否是快速开始模式创建的知识库，默认为False |
 
 ### <h3><p id="新建知识库请求示例">新建知识库请求示例</p></h3>
 
@@ -154,12 +171,13 @@ Content-Type: multipart/form-data
 
 ### <h3><p id="上传文件请求参数body">上传文件请求参数（Body）</p></h3>
 
-| 参数名  | 参数值                             | 是否必填 | 参数类型 | 描述说明                                                                                                |
-| ------- | ---------------------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| files   | 文件二进制                         | 是       | File     | 需要上传的文件，可多选，目前仅支持[md,txt,pdf,jpg,png,jpeg,docx,xlsx,pptx,eml,csv]                      |
-| user_id | zzp                                | 是       | String   | 用户 id                                                                                                 |
-| kb_id   | KBb1dd58e8485443ce81166d24f6febda7 | 是       | String   | 知识库 id                                                                                               |
-| mode    | soft                               | 否       | String   | 上传模式，soft：知识库内存在同名文件时当前文件不再上传，strong：文件名重复的文件强制上传，默认值为 soft |
+| 参数名        | 参数值                                | 是否必填 | 参数类型   | 描述说明                                                              |
+| ---------- | ---------------------------------- | ---- | ------ | ----------------------------------------------------------------- |
+| files      | 文件二进制                              | 是    | File   | 需要上传的文件，可多选，目前仅支持[md,txt,pdf,jpg,png,jpeg,docx,xlsx,pptx,eml,csv] |
+| user_id    | zzp                                | 是    | String | 用户 id                                                             |
+| kb_id      | KBb1dd58e8485443ce81166d24f6febda7 | 是    | String | 知识库 id                                                            |
+| mode       | soft                               | 否    | String | 上传模式，soft：知识库内存在同名文件时当前文件不再上传，strong：文件名重复的文件强制上传，默认值为 soft       |
+| chunk_size | 800                                | 否    | Int    | 文件切片大小，默认为800tokens                                               |
 
 ### <h3><p id="上传文件同步请求示例">上传文件同步请求示例</p></h3>
 
@@ -172,7 +190,7 @@ folder_path = "./docx_data"  # 文件所在文件夹，注意是文件夹！！
 data = {
     "user_id": "zzp",
     "kb_id": "KB6dae785cdd5d47a997e890521acbe1c9",
-		"mode": "soft"
+    "mode": "soft"
 }
 
 files = []
@@ -284,12 +302,15 @@ if __name__ == '__main__':
 
 ### <h3><p id="上传网页文件请求参数body">上传网页文件请求参数（Body）</p></h3>
 
-| 参数名  | 参数值                                                          | 是否必填 | 参数类型 | 描述说明                                                                                                |
-| ------- | --------------------------------------------------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| url     | "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html" | 是       | String   | html 网址，只支持无需登录的网站                                                                         |
-| user_id | zzp                                                             | 是       | String   | 用户 id                                                                                                 |
-| kb_id   | KBb1dd58e8485443ce81166d24f6febda7                              | 是       | String   | 知识库 id                                                                                               |
-| mode    | soft                                                            | 否       | String   | 上传模式，soft：知识库内存在同名文件时当前文件不再上传，strong：文件名重复的文件强制上传，默认值为 soft |
+| 参数名        | 参数值                                                             | 是否必填 | 参数类型      | 描述说明                                                                      |
+| ---------- | --------------------------------------------------------------- | ---- | --------- | ------------------------------------------------------------------------- |
+| url        | "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html" | 否    | String    | html 网址，只支持无需登录且没有反爬虫的网站，不支持递归解析多级页面，解析单个url时使用此参数，解析多个url时可使用urls+titles |
+| user_id    | zzp                                                             | 是    | String    | 用户 id                                                                     |
+| kb_id      | KBb1dd58e8485443ce81166d24f6febda7                              | 是    | String    | 知识库 id                                                                    |
+| mode       | soft                                                            | 否    | String    | 上传模式，soft：知识库内存在同名文件时当前文件不再上传，strong：文件名重复的文件强制上传，默认值为 soft               |
+| urls       | ["https://xxx", "https://xxx2"]                                 | 否    | List[str] | 与titles配合使用，同时上传多个url                                                     |
+| titles     | ["页面1"，"页面2"]                                                   | 否    | List[str] | 与urls配合使用，同时上传多个url，可为[]                                                  |
+| chunk_size | 800                                                             | 否    | Int       | 文件切片大小，默认为800tokens                                                       |
 
 ### <h3><p id="上传网页文件请求示例">上传网页文件请求示例</p></h3>
 
@@ -303,8 +324,8 @@ headers = {
 }
 data = {
     "user_id": "zzp",
-		"kb_id": "KBb1dd58e8485443ce81166d24f6febda7",
-		"url": "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html"
+    "kb_id": "KBb1dd58e8485443ce81166d24f6febda7",
+    "url": "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -322,7 +343,8 @@ print(response.text)
   "data": [
     {
       "file_id": "9a49392e633d4c6f87e0af51e8c80a86",
-      "file_name": "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html",
+      "file_name": "index.html.web",
+      "file_url": "https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html",
       "status": "gray",
       "bytes": 0, // 网页文件无法显示大小
       "timestamp": "202401261809"
@@ -337,9 +359,9 @@ print(response.text)
 
 ### <h3><p id="查看知识库请求参数body">查看知识库请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值 | 是否必填 | 参数类型 | 描述说明 |
-| ------- | ---------- | -------- | -------- | -------- |
-| user_id | "zzp"      | 是       | String   | 用户 id  |
+| 参数名     | 示例参数值 | 是否必填 | 参数类型   | 描述说明  |
+| ------- | ----- | ---- | ------ | ----- |
+| user_id | "zzp" | 是    | String | 用户 id |
 
 ### <h3><p id="查看知识库请求示例">查看知识库请求示例</p></h3>
 
@@ -381,10 +403,13 @@ print(response.text)
 
 ### <h3><p id="获取文件列表请求参数body">获取文件列表请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值                           | 是否必填 | 参数类型 | 描述说明  |
-| ------- | ------------------------------------ | -------- | -------- | --------- |
-| user_id | "zzp"                                | 是       | String   | 用户 id   |
-| kb_id   | "KBb1dd58e8485443ce81166d24f6febda7" | 是       | String   | 知识库 id |
+| 参数名         | 示例参数值                                | 是否必填 | 参数类型   | 描述说明                                       |
+| ----------- | ------------------------------------ | ---- | ------ | ------------------------------------------ |
+| user_id     | "zzp"                                | 是    | String | 用户 id                                      |
+| kb_id       | "KBb1dd58e8485443ce81166d24f6febda7" | 是    | String | 知识库 id                                     |
+| file_id     | "m1xd58e8485443ce81166d24f6few33d"   | 否    | String | 文件id，指定文件id则只返回单个文件的状态                     |
+| page_offset | 1                                    | 否    | Int    | 默认值为1，结果太多时可指定分页id（从1开始），与page_limit配合使用   |
+| page_limit  | 10                                   | 否    | Int    | 默认值为10，结果太多时可指定分页id（从1开始），与page_offset配合使用 |
 
 ### <h3><p id="获取文件列表请求示例">获取文件列表请求示例</p></h3>
 
@@ -397,8 +422,8 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",  //用户id
-	"kb_id": "KBb1dd58e8485443ce81166d24f6febda7" //知识库id
+    "user_id": "zzp",  //用户id
+    "kb_id": "KBb1dd58e8485443ce81166d24f6febda7" //知识库id
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -411,37 +436,44 @@ print(response.text)
 
 ```json
 {
-	"code": 200, //状态码
-	"msg": "success", //提示信息
-	"data": {
-		"total": {  // 知识库所有文件状态
-			"green": 100,
-			"red": 1,
-			"gray": 1,
-			"yellow": 1,
-		},
-		"details": {  // 每个文件的具体状态
-			{
-				"file_id": "21a9f13832594b0f936b62a54254543b", //文件id
-				"file_name": "有道知识库问答产品介绍.pptx", //文件名
-				"status": "green", //文件状态（red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus失败，gray：正在入库）
-				"bytes": 177925,
-				"content_length": 3059,  // 文件解析后字符长度，用len()计算
-				"timestamp": "202401261708",
-				"msg": "上传成功"
-			},
-			{
-				"file_id": "333e69374a8d4b9bac54f274291f313e", //文件id
-				"file_name": "网易有道智云平台产品介绍2023.6.ppt", //文件名
-				"status": "green", //文件状态（red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus失败，gray：正在入库）
-				"bytes": 12379,
-				"content_length": 3239,  // 文件解析后字符长度，用len()计算
-				"timestamp": "202401261708",
-				"msg": "上传成功"
-			}
-		}
-		// ...
-	}
+    "code": 200, //状态码
+    "msg": "success", //提示信息
+    "data": {
+        "status_count": {  // 知识库所有文件状态
+            "green": 100,
+            "red": 1,
+            "gray": 1,
+            "yellow": 1,
+        },
+        "details": {  // 每个文件的具体状态
+            {
+                "file_id": "21a9f13832594b0f936b62a54254543b", //文件id
+                "file_name": "有道知识库问答产品介绍.pptx", //文件名
+                "status": "green", //文件状态（red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus失败，gray：正在入库）
+                "bytes": 177925,
+                "chunks_number": 16,
+                "content_length": 3059,  // 文件解析后字符长度，用len()计算
+                "file_location": "/workspace/QAnything/QANY_DB/content/zzp__1234/KBf593b232db0e454db43457a6d1c3632c_240625/63700516e25f4c81b9fd9f68b4a6410b/GeoAutoTrackHorizon.pdf"
+                "timestamp": "202401261708",
+                "msg": "上传成功"
+            },
+            {
+                "file_id": "333e69374a8d4b9bac54f274291f313e", //文件id
+                "file_name": "网易有道智云平台产品介绍2023.6.ppt", //文件名
+                "status": "green", //文件状态（red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus失败，gray：正在入库）
+                "bytes": 12379,
+                "chunks_number": 20,
+                "content_length": 3239,  // 文件解析后字符长度，用len()计算
+                "file_location": "/workspace/QAnything/QANY_DB/content/zzp__1234/KBf593b232db0e454db43457a6d1c3632c_240625/63700516e25f4c81b9fd9f68b4a6410b/GeoAutoTrackHorizon.pdf"
+                "timestamp": "202401261708",
+                "msg": "上传成功"
+            }
+        },
+        "page_id": 1,
+        "total": 53,
+        "total_page": 1,  
+        // ...
+    }
 }
 ```
 
@@ -451,18 +483,28 @@ print(response.text)
 
 ### <h3><p id="-问答请求参数body"> 问答请求参数（Body）</p></h3>
 
-| 参数名           | 示例参数值                                                                        | 是否必填 | 参数类型         | 描述说明                   |
-|---------------|------------------------------------------------------------------------------|------|--------------|------------------------|
-| user_id       | "zzp"                                                                        | 是    | String       | 用户 id                  |
-| kb_ids        | ["KBb1dd58e8485443ce81166d24f6febda7", "KB633c69d07a2446b39b3a38e3628b8ada"] | 是    | Array        | 知识库 id 的列表，支持多个知识库联合问答 |
-| question      | "保险单号是多少？"                                                                   | 是    | String       | 用户的问题 |
-| history       | [["question1","answer1"],["question2","answer2"]]                            | 否    | Array[Array] | 历史对话                   |
-| rerank        | True                                                                         | 否    | Bool         | 是否开启 rerank，默认为 True   |
-| streaming     | False                                                                        | 否    | Bool         | 是否开启流式输出，默认为 False     |
-| networking    | False                                                                        | 否    | Bool         | 是否开启联网搜索，默认为 False     |
-| custom_prompt | "你是一个耐心、友好、专业的编程机器人，能够准确的回答用户的各种编程问题。"                                       | 否    | String       | 使用自定义prompt            |
-
-
+| 参数名                      | 示例参数值                                                                        | 是否必填 | 参数类型         | 描述说明                                                           |
+| ------------------------ | ---------------------------------------------------------------------------- | ---- | ------------ | -------------------------------------------------------------- |
+| user_id                  | "zzp"                                                                        | 是    | String       | 用户 id                                                          |
+| kb_ids                   | ["KBb1dd58e8485443ce81166d24f6febda7", "KB633c69d07a2446b39b3a38e3628b8ada"] | 否    | Array        | 知识库 id 的列表，支持多个知识库联合问答，仅在使用bot_id的情况下不需要填                      |
+| question                 | "保险单号是多少？"                                                                   | 是    | String       | 知识库 id 的列表，支持多个知识库联合问答                                         |
+| history                  | [["question1","answer1"],["question2","answer2"]]                            | 否    | Array[Array] | 历史对话                                                           |
+| rerank                   | True                                                                         | 否    | Bool         | 是否开启 rerank，默认为 True                                           |
+| streaming                | False                                                                        | 否    | Bool         | 是否开启流式输出，默认为 False                                             |
+| networking               | False                                                                        | 否    | Bool         | 是否开启联网搜索，默认为 False                                             |
+| custom_prompt            | "你是一个耐心、友好、专业的编程机器人，能够准确的回答用户的各种编程问题。"                                       | 否    | String       | 使用自定义prompt                                                    |
+| only_need_search_results | False                                                                        | 否    | Bool         | 是否仅返回检索结果跳过大模型回答步骤，默认为False                                    |
+| source                   | paas                                                                         | 否    | String       | 可用于区分请求来源，目前共有paas，saas_bot，saas_qa，分别代表api调用，前端bot问答，前端知识库问答  |
+| bot_id                   | 1234                                                                         | 否    | String       | 问答若使用bot_id则相关bot设置自动生效，不需要传kb_ids和custom_prompt了              |
+| hybrid_search            | False                                                                        | 否    | String       | 是否开启混合检索，默认为False                                              |
+| max_token                | 512                                                                          | 是    | int          | LLM输出的最大token数，一般最大设置为上下文长度的1/4，比如4K上下文设置范围应该是[0-1024]，默认值为512 |
+| api_base                 | "https://api.openai-proxy.org/v1"                                            | 是    | String       |                                                                |
+| api_key                  | "sk-xxx"                                                                     | 是    | String       |                                                                |
+| api_context_length       | 16000                                                                        | 是    | String       | 上下文总长度                                                         |
+| model                    | "gpt-3.5-turbo"                                                              | 是    | String       |                                                                |
+| top_p                    | 0.99                                                                         | 否    | Float        |                                                                |
+| temperature              | 0.5                                                                          | 否    | Float        |                                                                |
+| web_chunk_size           | 800                                                                          | 否    | Int          | 开启联网检索后生效，web搜索到的内容文本分块大小                                      |
 
 ### <h3><p id="-问答非流式请求示例"> 问答非流式请求示例</p></h3>
 
@@ -477,9 +519,24 @@ def send_request():
         'content-type': 'application/json'
     }
     data = {
-        "user_id": "zzp",
-        "kb_ids": ["KBf652e9e379c546f1894597dcabdc8e47"],
-        "question": "一嗨案件中保险单号是多少？",
+        "user_id":"zzp",
+        "kb_ids":["KBb85274e102df4de6aa22bf15a47d1c06_240625"],
+        "history":[],
+        "question":"蔡徐坤是谁？",
+        "streaming":true,
+        "networking":false,
+        "product_source":"saas",
+        "rerank":false,
+        "only_need_search_results":false,
+        "hybrid_search":false,
+        "max_token":512,
+        "api_base":"https://api.openai-proxy.org/v1",
+        "api_key":"sk-xxx",
+        "model":"gpt-3.5-turbo",
+        "api_context_length":16384,
+        "chunk_size":800,
+        "top_p":1,
+        "temperature":0.5
     }
     try:
         start_time = time.time()
@@ -530,7 +587,23 @@ if __name__ == '__main__':
       "score": "-8.9622345",
       "embed_version": "local_v0.0.1_20230525_6d4019f1559aef84abc2ab8257e1ad4c"
     }
-  ] //知识库相关文本内容
+  ]， //retrieval_documents经过一系列后处理最终给到LLM的文本内容，可能是多个chunks组合而成
+  "retrieval_documents": [...], // 检索到的文本chunks
+  "time_record": {
+    "time_usage": {
+        "preprocess": 0.01,
+        "retriever_search_by_milvus": 0.2,
+        "retriever_search": 0.2,
+        "rerank": 0.13,
+        "reprocess": 0.02,
+        "llm_first_return": 2.64
+    },
+    "token_usage": {
+        "prompt_tokens": 1847,
+        "completion_tokens": 50,
+        "total_tokens": 1897
+    }
+  }
 }
 ```
 
@@ -617,11 +690,11 @@ if __name__ == '__main__':
 
 ### <h3><p id="-删除文件请求参数body"> 删除文件请求参数（Body）</p></h3>
 
-| 参数名   | 示例参数值                           | 是否必填 | 参数类型 | 描述说明                      |
-| -------- | ------------------------------------ | -------- | -------- | ----------------------------- |
-| user_id  | "zzp"                                | 是       | String   | 用户 id                       |
-| kb_id    | "KB1271e71c36ec4028a6542586946a3906" | 是       | String   | 知识库 id                     |
-| file_ids | ["73ff7cf76ff34c8aa3a5a0b4ba3cf534"] | 是       | Array    | 要删除文件的 id，支持批量删除 |
+| 参数名      | 示例参数值                                | 是否必填 | 参数类型   | 描述说明             |
+| -------- | ------------------------------------ | ---- | ------ | ---------------- |
+| user_id  | "zzp"                                | 是    | String | 用户 id            |
+| kb_id    | "KB1271e71c36ec4028a6542586946a3906" | 是    | String | 知识库 id           |
+| file_ids | ["73ff7cf76ff34c8aa3a5a0b4ba3cf534"] | 是    | Array  | 要删除文件的 id，支持批量删除 |
 
 ### <h3><p id="-删除文件请求示例"> 删除文件请求示例</p></h3>
 
@@ -634,11 +707,11 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp", //用户id
-	"kb_id": "KB1271e71c36ec4028a6542586946a3906", //知识库id
-	"file_ids": [
-		"73ff7cf76ff34c8aa3a5a0b4ba3cf534"
-	] //文件id列表
+    "user_id": "zzp", //用户id
+    "kb_id": "KB1271e71c36ec4028a6542586946a3906", //知识库id
+    "file_ids": [
+        "73ff7cf76ff34c8aa3a5a0b4ba3cf534"
+    ] //文件id列表
 }
 response = requests.post(url, headers=headers, data=json.dumps(data))
 
@@ -661,10 +734,10 @@ URL：<http://{your_host}:8777/api/local_doc_qa/delete_knowledge_base>
 
 ### <h3><p id="-删除知识库请求参数body"> 删除知识库请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值                             | 是否必填 | 参数类型 | 描述说明                        |
-| ------- | -------------------------------------- | -------- | -------- | ------------------------------- |
-| user_id | "zzp"                                  | 是       | String   | 用户 id                         |
-| kb_ids  | ["KB1cd81f2bc515437294bda1934a20b235"] | 是       | Array    | 要删除的知识库 id，支持批量删除 |
+| 参数名     | 示例参数值                                  | 是否必填 | 参数类型   | 描述说明              |
+| ------- | -------------------------------------- | ---- | ------ | ----------------- |
+| user_id | "zzp"                                  | 是    | String | 用户 id             |
+| kb_ids  | ["KB1cd81f2bc515437294bda1934a20b235"] | 是    | Array  | 要删除的知识库 id，支持批量删除 |
 
 ### <h3><p id="-删除知识库请求示例"> 删除知识库请求示例</p></h3>
 
@@ -677,10 +750,10 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp", //用户id
-	"kb_ids": [
-		"KB1cd81f2bc515437294bda1934a20b235"
-	] //知识库id列表
+    "user_id": "zzp", //用户id
+    "kb_ids": [
+        "KB1cd81f2bc515437294bda1934a20b235"
+    ] //知识库id列表
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -704,9 +777,9 @@ print(response.text)
 
 ### <h3><p id="获取所有知识库状态请求参数body">获取所有知识库状态请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值 | 是否必填 | 参数类型 | 描述说明 |
-| ------- | ---------- | -------- | -------- | -------- |
-| user_id | "zzp"      | 是       | String   | 用户 id  |
+| 参数名     | 示例参数值 | 是否必填 | 参数类型   | 描述说明  |
+| ------- | ----- | ---- | ------ | ----- |
+| user_id | "zzp" | 是    | String | 用户 id |
 
 ### <h3><p id="获取所有知识库状态请求示例">获取所有知识库状态请求示例</p></h3>
 
@@ -719,7 +792,7 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp"
+    "user_id": "zzp"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -759,11 +832,11 @@ print(response.text)
 
 ### <h3><p id="清理知识库请求参数body">清理知识库请求参数（Body）</p></h3>
 
-| 参数名  | 示例参数值                                                                   | 是否必填 | 参数类型 | 描述说明                                                                                                    |
-| ------- | ---------------------------------------------------------------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| user_id | "zzp"                                                                        | 是       | String   | 用户 id                                                                                                     |
-| status  | "gray"                                                                       | 是       | String   | 用清理何种状态的文件，red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus 失败，gray：正在入库 |
-| kd_ids  | ["KB0015df77a8eb46f6951de513392dc250", "KB6a4534f753b54c4198b62770e26b1a92"] | 否       | String   | 需要清理的知识库 id 列表，默认为[]，此时默认清理 user_id 下全部的知识库                                     |
+| 参数名     | 示例参数值                                                                        | 是否必填 | 参数类型   | 描述说明                                                                |
+| ------- | ---------------------------------------------------------------------------- | ---- | ------ | ------------------------------------------------------------------- |
+| user_id | "zzp"                                                                        | 是    | String | 用户 id                                                               |
+| status  | "gray"                                                                       | 是    | String | 用清理何种状态的文件，red：入库失败-切分失败，green，成功入库，yellow：入库失败-milvus 失败，gray：正在入库 |
+| kd_ids  | ["KB0015df77a8eb46f6951de513392dc250", "KB6a4534f753b54c4198b62770e26b1a92"] | 否    | String | 需要清理的知识库 id 列表，默认为[]，此时默认清理 user_id 下全部的知识库                         |
 
 ### <h3><p id="清理知识库请求示例">清理知识库请求示例</p></h3>
 
@@ -776,8 +849,8 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",
-	"status": "gray"
+    "user_id": "zzp",
+    "status": "gray"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -812,11 +885,11 @@ print(response.text)
 
 ### <h3><p id="重命名知识库请求参数body">重命名知识库请求参数（Body）</p></h3>
 
-| 参数名      | 示例参数值                           | 是否必填 | 参数类型 | 描述说明              |
-| ----------- | ------------------------------------ | -------- | -------- | --------------------- |
-| user_id     | "zzp"                                | 是       | String   | 用户 id               |
-| kb_id       | "KB0015df77a8eb46f6951de513392dc250" | 是       | String   | 需要重命名的知识库 id |
-| new_kb_name | "新知识库"                           | 是       | String   | 重命名后的知识库名字  |
+| 参数名         | 示例参数值                                | 是否必填 | 参数类型   | 描述说明         |
+| ----------- | ------------------------------------ | ---- | ------ | ------------ |
+| user_id     | "zzp"                                | 是    | String | 用户 id        |
+| kb_id       | "KB0015df77a8eb46f6951de513392dc250" | 是    | String | 需要重命名的知识库 id |
+| new_kb_name | "新知识库"                               | 是    | String | 重命名后的知识库名字   |
 
 ### <h3><p id="重命名知识库请求示例">重命名知识库请求示例</p></h3>
 
@@ -829,9 +902,9 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",
-	"kb_id": "KB0015df77a8eb46f6951de513392dc250",
-	"new_kb_name": "新知识库"
+    "user_id": "zzp",
+    "kb_id": "KB0015df77a8eb46f6951de513392dc250",
+    "new_kb_name": "新知识库"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -855,16 +928,16 @@ print(response.text)
 
 ### <h3><p id="创建bot请求参数body">创建Bot请求参数（Body）</p></h3>
 
-| 参数名         | 示例参数值                           | 是否必填 | 参数类型         | 描述说明                  |
-|-------------|---------------------------------|------|--------------|-----------------------|
-| user_id     | "zzp"                           | 是    | String       | 用户 id                 |
-| bot_name    | "测试"                            | 是    | String       | Bot名字                 |
-| description | "这是一个测试Bot"                     | 否    | String       | Bot简介                 |
-| head_image | "zhiyun/xxx"                    | 否    | String       | 头像nos地址               |
-| prompt_setting | "你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。" | 否    | String       | Bot角色设定               |
+| 参数名             | 示例参数值                           | 是否必填 | 参数类型         | 描述说明                  |
+| --------------- | ------------------------------- | ---- | ------------ | --------------------- |
+| user_id         | "zzp"                           | 是    | String       | 用户 id                 |
+| bot_name        | "测试"                            | 是    | String       | Bot名字                 |
+| description     | "这是一个测试Bot"                     | 否    | String       | Bot简介                 |
+| head_image      | "zhiyun/xxx"                    | 否    | String       | 头像nos地址               |
+| prompt_setting  | "你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。" | 否    | String       | Bot角色设定               |
 | welcome_message | "您好，我是您的专属机器人，请问有什么可以帮您呢？"      | 否    | String       | Bot欢迎语                |
-| model | "MiniChat-2-3B"                 | 否    | String       | 模型选择，默认为MiniChat-2-3B |
-| kb_ids | ["KB_xxx, KB_xxx, KB_xxx"]      | 否    | List[String] | Bot关联的知识库id列表         |
+| model           | "MiniChat-2-3B"                 | 否    | String       | 模型选择，默认为MiniChat-2-3B |
+| kb_ids          | ["KB_xxx, KB_xxx, KB_xxx"]      | 否    | List[String] | Bot关联的知识库id列表         |
 
 ### <h3><p id="创建bot请求示例">创建Bot请求示例</p></h3>
 
@@ -877,8 +950,8 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",
-	"bot_name": "测试机器人"
+    "user_id": "zzp",
+    "bot_name": "测试机器人"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -891,13 +964,13 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "success create qanything bot BOTc87cc749a9844325a2e26f09bf8f6918",
-	"data": {
-		"bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918",
-		"bot_name": "测试机器人",
-		"create_time": "2024-04-10 10:19:56"
-	}
+    "code": 200,
+    "msg": "success create qanything bot BOTc87cc749a9844325a2e26f09bf8f6918",
+    "data": {
+        "bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918",
+        "bot_name": "测试机器人",
+        "create_time": "2024-04-10 10:19:56"
+    }
 }
 ```
 
@@ -907,10 +980,10 @@ print(response.text)
 
 ### <h3><p id="获取bot信息请求参数body">获取Bot信息请求参数（Body）</p></h3>
 
-| 参数名             | 示例参数值                                 | 是否必填 | 参数类型 | 描述说明                  |
-|-----------------|---------------------------------------|------| -------- |-----------------------|
-| user_id         | "zzp"                                 | 是    | String   | 用户 id                 |
-| bot_id          | "BOTc87cc749a9844325a2e26f09bf8f6918" | 否    | String   | Bot id，不填则返回当前用户所有Bot |
+| 参数名     | 示例参数值                                 | 是否必填 | 参数类型   | 描述说明                  |
+| ------- | ------------------------------------- | ---- | ------ | --------------------- |
+| user_id | "zzp"                                 | 是    | String | 用户 id                 |
+| bot_id  | "BOTc87cc749a9844325a2e26f09bf8f6918" | 否    | String | Bot id，不填则返回当前用户所有Bot |
 
 ### <h3><p id="获取bot信息请求示例">获取Bot信息请求示例</p></h3>
 
@@ -923,8 +996,8 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",
-	"bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918"
+    "user_id": "zzp",
+    "bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -937,22 +1010,22 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "success",
-	"data": [
-		{
-			"bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918",
-			"user_id": "zzp",
-			"bot_name": "测试机器人",
-			"description": "一个简单的问答机器人",
-			"head_image": "",
-			"prompt_setting": "\n- 你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。\n- 根据知识库内的检索结果，以清晰简洁的表达方式回答问题。\n- 不要编造答案，如果答案不在经核实的资料中或无法从经核实的资料中得出，请回答“我无法回答您的问题。”（或者您可以修改为：如果给定的检索结果无法回答问题，可以利用你的知识尽可能回答用户的问题。)\n",
-			"welcome_message": "您好，我是您的专属机器人，请问有什么可以帮您呢？",
-			"model": "MiniChat-2-3B",
-			"kb_ids": "",
-			"update_time": "2024-04-10 10:19:56"
-		}
-	]
+    "code": 200,
+    "msg": "success",
+    "data": [
+        {
+            "bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918",
+            "user_id": "zzp",
+            "bot_name": "测试机器人",
+            "description": "一个简单的问答机器人",
+            "head_image": "",
+            "prompt_setting": "\n- 你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。\n- 根据知识库内的检索结果，以清晰简洁的表达方式回答问题。\n- 不要编造答案，如果答案不在经核实的资料中或无法从经核实的资料中得出，请回答“我无法回答您的问题。”（或者您可以修改为：如果给定的检索结果无法回答问题，可以利用你的知识尽可能回答用户的问题。)\n",
+            "welcome_message": "您好，我是您的专属机器人，请问有什么可以帮您呢？",
+            "model": "MiniChat-2-3B",
+            "kb_ids": "",
+            "update_time": "2024-04-10 10:19:56"
+        }
+    ]
 }
 ```
 
@@ -962,17 +1035,17 @@ print(response.text)
 
 ### <h3><p id="修改bot信息请求参数body">修改Bot信息请求参数（Body）</p></h3>
 
-| 参数名             | 示例参数值                          | 是否必填 | 参数类型 | 描述说明                  |
-|-----------------|--------------------------------|------| -------- |-----------------------|
-| user_id         | "zzp"                          | 是    | String   | 用户 id                 |
-| bot_id          | "BOTc87cc749a9844325a2e26f09bf8f6918"  | 是    | String   | 用户 id                 |
-| bot_name        | "测试"                           | 否    | String   | Bot名字                 |
-| description     | "这是一个测试Bot"                    | 否    | String   | Bot简介                 |
-| head_image      | "zhiyun/xxx"                   | 否    | String   | 头像nos地址               |
-| prompt_setting  | "你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。" | 否    | String   | Bot角色设定               |
-| welcome_message | "您好，我是您的专属机器人，请问有什么可以帮您呢？"     | 否    | String   | Bot欢迎语                |
-| model           | "MiniChat-2-3B"                | 否    | String   | 模型选择，默认为MiniChat-2-3B |
-| kb_ids          | "KB_xxx, KB_xxx, KB_xxx"       | 否    | String   | Bot关联的知识库id列表         |
+| 参数名             | 示例参数值                                 | 是否必填 | 参数类型   | 描述说明                  |
+| --------------- | ------------------------------------- | ---- | ------ | --------------------- |
+| user_id         | "zzp"                                 | 是    | String | 用户 id                 |
+| bot_id          | "BOTc87cc749a9844325a2e26f09bf8f6918" | 是    | String | 用户 id                 |
+| bot_name        | "测试"                                  | 否    | String | Bot名字                 |
+| description     | "这是一个测试Bot"                           | 否    | String | Bot简介                 |
+| head_image      | "zhiyun/xxx"                          | 否    | String | 头像nos地址               |
+| prompt_setting  | "你是一个耐心、友好、专业的机器人，能够回答用户的各种问题。"       | 否    | String | Bot角色设定               |
+| welcome_message | "您好，我是您的专属机器人，请问有什么可以帮您呢？"            | 否    | String | Bot欢迎语                |
+| model           | "MiniChat-2-3B"                       | 否    | String | 模型选择，默认为MiniChat-2-3B |
+| kb_ids          | "KB_xxx, KB_xxx, KB_xxx"              | 否    | String | Bot关联的知识库id列表         |
 
 ### <h3><p id="修改bot信息请求示例">修改ot信息请求示例</p></h3>
 
@@ -1006,8 +1079,8 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "Bot BOTc87cc749a9844325a2e26f09bf8f6918 update success"
+    "code": 200,
+    "msg": "Bot BOTc87cc749a9844325a2e26f09bf8f6918 update success"
 }
 ```
 
@@ -1017,10 +1090,10 @@ print(response.text)
 
 ### <h3><p id="删除bot请求参数body">删除Bot请求参数（Body）</p></h3>
 
-| 参数名             | 示例参数值                                 | 是否必填 | 参数类型 | 描述说明                  |
-|-----------------|---------------------------------------|------| -------- |-----------------------|
-| user_id         | "zzp"                                 | 是    | String   | 用户 id                 |
-| bot_id          | "BOTc87cc749a9844325a2e26f09bf8f6918" | 否    | String   | Bot id，不填则返回当前用户所有Bot |
+| 参数名     | 示例参数值                                 | 是否必填 | 参数类型   | 描述说明                  |
+| ------- | ------------------------------------- | ---- | ------ | --------------------- |
+| user_id | "zzp"                                 | 是    | String | 用户 id                 |
+| bot_id  | "BOTc87cc749a9844325a2e26f09bf8f6918" | 否    | String | Bot id，不填则返回当前用户所有Bot |
 
 ### <h3><p id="删除bot请求示例">删除Bot请求示例</p></h3>
 
@@ -1033,8 +1106,8 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-	"user_id": "zzp",
-	"bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918"
+    "user_id": "zzp",
+    "bot_id": "BOTc87cc749a9844325a2e26f09bf8f6918"
 }
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -1047,8 +1120,8 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "Bot BOTc87cc749a9844325a2e26f09bf8f6918 delete success"
+    "code": 200,
+    "msg": "Bot BOTc87cc749a9844325a2e26f09bf8f6918 delete success"
 }
 ```
 
@@ -1060,12 +1133,12 @@ Content-Type: multipart/form-data
 
 ### <h3><p id="上传faq请求参数body">上传FAQ请求参数（Body）</p></h3>
 
-| 参数名     | 参数值                                              | 是否必填 | 参数类型       | 描述说明                      |
-|---------|--------------------------------------------------|------|------------|---------------------------|
-| files   | 文件二进制                                            | 否    | File       | 需要上传的文件，可多选，仅支持xlsx格式     |
-| user_id | zzp                                              | 是    | String     | 用户 id                     |
-| kb_id   | KBb1dd58e8485443ce81166d24f6febda7_FAQ           | 是    | String     | 知识库 id                    |
-| faqs    | [{"question": "你是谁？", "answer": "我是QAnything！"}] | 否    | List[Dict] | json格式的FAQ集合（与files参数二选一） |
+| 参数名        | 参数值                                              | 是否必填 | 参数类型       | 描述说明           |
+| ---------- | ------------------------------------------------ | ---- | ---------- | -------------- |
+| user_id    | zzp                                              | 是    | String     | 用户 id          |
+| kb_id      | KBb1dd58e8485443ce81166d24f6febda7_FAQ           | 是    | String     | 知识库 id         |
+| faqs       | [{"question": "你是谁？", "answer": "我是QAnything！"}] | 否    | List[Dict] | json格式的FAQ集合   |
+| chunk_size | 800                                              | 否    | Int        | 文件切片大小（tokens） |
 
 ### <h3><p id="上传faq请求示例">上传FAQ请求示例</p></h3>
 
@@ -1074,20 +1147,13 @@ import os
 import requests
 
 url = "http://{your_host}:8777/api/local_doc_qa/upload_faqs"
-folder_path = "./xlsx_data"  # 文件所在文件夹，注意是文件夹！！
 data = {
     "user_id": "zzp",
     "kb_id": "KB6dae785cdd5d47a997e890521acbe1c9_FAQ",
+    "faqs": [{"question": "北京3月13日天气"， "answer": "15-29度，小雨转晴"}]
 }
 
-files = []
-for root, dirs, file_names in os.walk(folder_path):
-    for file_name in file_names:
-        if file_name.endswith(".xlsx"):
-            file_path = os.path.join(root, file_name)
-            files.append(("files", open(file_path, "rb")))
-
-response = requests.post(url, files=files, data=data)
+response = requests.post(url, data=data)
 print(response.text)
 ```
 
@@ -1095,41 +1161,41 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "success，后台正在飞速上传文件，请耐心等待",
-	"file_status": {
-		"QAnything_QA_模板.xlsx": "success"
-	},
-	"data": [
-		{
-			"file_id": "de9c63dfd2fe477394041612bdfbdec3",
-			"file_name": "FAQ_你今天吃了什么.faq",
-			"status": "gray",
-			"length": 11,
-			"timestamp": "202404121141"
-		},
-		{
-			"file_id": "b3f9ac467ce14b0280e991c098298155",
-			"file_name": "FAQ_天气晴朗吗.faq",
-			"status": "gray",
-			"length": 9,
-			"timestamp": "202404121141"
-		},
-		{
-			"file_id": "5a5ac165324940a8a62062a5335f5f92",
-			"file_name": "FAQ_你是谁.faq",
-			"status": "gray",
-			"length": 14,
-			"timestamp": "202404121141"
-		},
-		{
-			"file_id": "562e9a2d1b994d619d4e1ebc85857c92",
-			"file_name": "FAQ_你好呀.faq",
-			"status": "gray",
-			"length": 7,
-			"timestamp": "202404121141"
-		}
-	]
+    "code": 200,
+    "msg": "success，后台正在飞速上传文件，请耐心等待",
+    "file_status": {
+        "QAnything_QA_模板.xlsx": "success"
+    },
+    "data": [
+        {
+            "file_id": "de9c63dfd2fe477394041612bdfbdec3",
+            "file_name": "FAQ_你今天吃了什么.faq",
+            "status": "gray",
+            "length": 11,
+            "timestamp": "202404121141"
+        },
+        {
+            "file_id": "b3f9ac467ce14b0280e991c098298155",
+            "file_name": "FAQ_天气晴朗吗.faq",
+            "status": "gray",
+            "length": 9,
+            "timestamp": "202404121141"
+        },
+        {
+            "file_id": "5a5ac165324940a8a62062a5335f5f92",
+            "file_name": "FAQ_你是谁.faq",
+            "status": "gray",
+            "length": 14,
+            "timestamp": "202404121141"
+        },
+        {
+            "file_id": "562e9a2d1b994d619d4e1ebc85857c92",
+            "file_name": "FAQ_你好呀.faq",
+            "status": "gray",
+            "length": 7,
+            "timestamp": "202404121141"
+        }
+    ]
 }
 ```
 
@@ -1139,17 +1205,17 @@ print(response.text)
 
 ### <h3><p id="检索qa日志请求参数body">检索qa日志请求参数（Body）</p></h3>
 
-| 参数名           | 示例参数值                                  | 是否必填 | 参数类型         | 描述说明                                                  |
-|---------------|----------------------------------------|------|--------------|-------------------------------------------------------|
-| user_id       | "zzp"                                  | 是    | String       | 用户 id                                                 |
-| bot_id        | "BOTc87cc749a9844325a2e26f09bf8f6918"  | 否    | String       | 非空则增加bot_id的筛选条件                                      |
-| kb_ids        | ["KBc87cc749a9844325a2e26f09bf8f6918"] | 否    | List[String] | 非空则增加kb_ids的筛选条件                                      |
-| query         | "你的名字"                                 | 否    | String       | 非空则增加query的筛选条件                                       |
-| time_start    | "2024-10-05"                           | 否    | String       | 非空则增加time_start的筛选条件，需和time_end配合使用                   |
-| time_end      | "2024-10-05"                           | 否    | String       | 非空则增加time_end的筛选条件，需和time_start配合使用                   |
-| page_id       | 0                                      | 否    | Int          | 非空则增加page_id的筛选条件，结果超过100条时默认返回第0页（前100条），可用page_id换页 |
-| need_info     | ["query", "result", "timestamp"]       | 否    | List[String] | 非空则增加need_info的筛选条件, 返回日志的key，空则返回全部的key              |
-| save_to_excel | True                                   | 否    | Bool         | 默认为False，为True时返回excel文件，可直接下载                        |
+| 参数名           | 示例参数值                                 | 是否必填 | 参数类型         | 描述说明                                                  |
+| ------------- | ------------------------------------- | ---- | ------------ | ----------------------------------------------------- |
+| user_id       | "zzp"                                 | 否    | String       | 用户 id，与any_kb_id二选一必填                                 |
+| bot_id        | "BOTc87cc749a9844325a2e26f09bf8f6918" | 否    | String       | 非空则增加bot_id的筛选条件                                      |
+| any_kb_id     | "KBc87cc749a9844325a2e26f09bf8f6918"  | 否    | String       | 非空则增加kb_id的筛选条件                                       |
+| query         | "你的名字"                                | 否    | String       | 非空则增加query的筛选条件                                       |
+| time_start    | "2024-10-05"                          | 否    | String       | 非空则增加time_start的筛选条件，需和time_end配合使用                   |
+| time_end      | "2024-10-05"                          | 否    | String       | 非空则增加time_end的筛选条件，需和time_start配合使用                   |
+| page_id       | 0                                     | 否    | Int          | 非空则增加page_id的筛选条件，结果超过100条时默认返回第0页（前100条），可用page_id换页 |
+| need_info     | ["query", "result", "timestamp"]      | 否    | List[String] | 非空则增加need_info的筛选条件, 返回日志的key，空则返回全部的key              |
+| save_to_excel | True                                  | 否    | Bool         | 默认为False，为True时返回excel文件，可直接下载                        |
 
 ### <h3><p id="检索qa日志请求示例">检索qa日志请求示例</p></h3>
 
@@ -1182,13 +1248,192 @@ print(response.text)
 
 ```json
 {
-	"code": 200,
-	"msg": "检索到的Log数为1，一次返回所有数据",
-	"page_id": 0,
-	"qa_infos": [
-		{
-			"user_id": "zzp"
-		}
-	]
+    "code": 200,
+    "msg": "检索到的Log数为1，一次返回所有数据",
+    "page_id": 0,
+    "qa_infos": [
+        {
+            "user_id": "zzp"
+        }
+    ]
+}
+```
+
+## <h2><p id="获取文档完整解析内容post">获取文档完整解析内容（POST）</p></h2>
+
+### <h3><p id="urlhttpyour_host8777apilocal_doc_qaget_doc_completed">URL：<http://{your_host}:8777/api/local_doc_qa/get_doc_completed></p></h3>
+
+### <h3><p id="获取文档完整解析内容请求参数body">获取文档完整解析内容请求参数（Body）</p></h3>
+
+| 参数名         | 示例参数值                                       | 是否必填 | 参数类型   | 描述说明                                       |
+| ----------- | ------------------------------------------- | ---- | ------ | ------------------------------------------ |
+| user_id     | "zzp"                                       | 是    | String | 用户 id                                      |
+| kb_id       | "KB698428590b1e45108b63b943fac16559_240430" | 是    | String | 知识库id                                      |
+| file_id     | "68d7e503cb79497f8416152bb6b773cd"          | 是    | String | 文件id                                       |
+| page_offset | 1                                           | 否    | Int    | 默认值为1，结果太多时可指定分页id（从1开始），与page_limit配合使用   |
+| page_limit  | 10                                          | 否    | Int    | 默认值为10，结果太多时可指定分页id（从1开始），与page_offset配合使用 |
+
+### <h3><p id="获取文档完整解析内容请求示例">获取文档完整解析内容请求示例</p></h3>
+
+```python
+import requests
+import json
+
+url = "http://{your_host}:8777/api/local_doc_qa/get_doc_completed"
+headers = {
+    "Content-Type": "application/json"
+}
+data = {
+    "user_id": "zzp",
+    "kb_id": "KBe3f7b698208645218e787d2eee2eae41",
+    "file_id": "68d7e503cb79497f8416152bb6b773cd"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.status_code)
+print(response.text)
+```
+
+### <h3><p id="获取文档完整解析内容响应示例">获取文档完整解析内容响应示例</p></h3>
+
+```json
+{
+    "code": 200,
+    "msg": "success",
+    "completed_text": "\n6.全国两会会议精神.docx\n全国政协十四届二次会议开幕会会议精神\n\n6.全国两会会议精神.docx\n中国人民政治协商会议第十四届全国委员会第二次会议4日下午在人民大会堂开幕。2000多名全国政协委员将紧紧围绕中共中央决策部署，牢记政治责任，积极建言资政，广泛凝聚共识，共同谱写中国式现代化的壮美华章。\n\n6.全国两会会议精神.docx\n大会首先审议通过了政协第十四届全国委员会第二次会议议程。\n\n6.全国两会会议精神.docx\n王沪宁代表政协第十四届全国委员会常务委员会，向大会报告工作。\n\n6.全国两会会议精神.docx\n王沪宁表示，2023年是全面贯彻落实中共二十大精神的开局之年。以习近平同志为核心的中共中央团结带领全党全国各族人民，坚持稳中求进工作总基调，接续奋斗、砥砺前行，坚决克服内外困难，全面深化改革开放，新冠疫情防控平稳转段，高质量发展扎实推进，科技创新实现新突破，安全发展基础巩固夯实，民生保障有力有效，经济社会发展主要预期目标圆满完成，社会大局保持稳定，全面建设社会主义现代化国家迈出坚实步伐，极大增强了全国各族人民信心和底气。\n\n6.全国两会会议精神.docx\n王沪宁总结了过去一年来人民政协工作。他说，在以习近平同志为核心的中共中央坚强领导下，政协全国委员会及其常务委员会坚持以习近平新时代中国特色社会主义思想为指导，全面贯彻中共二十大和二十届二中全会精神，深刻领悟“两个确立”的决定性意义，增强“四个意识”、坚定“四个自信”、做到“两个维护”，坚持团结和民主两大主题，坚持人民政协性质定位，坚持在党和国家工作大局中谋划推进政协工作。坚持中国共产党对人民政协工作的全面领导、把牢履职正确政治方向，强化政治培训、提高政治能力和履职本领，完善工作制度体系、夯实履职制度基础，贯彻中共中央大兴调查研究要求、提高调研议政质量，围绕中共二十大重大部署协商议政、服务党和国家中心任务，践行以人民为中心的发展思想、助推保障和改善民生，守正创新、团结奋进，在历届全国政协打下的良好基础上，各项工作取得新成效，服务党和国家事业发展作出新贡献。\n\n6.全国两会会议精神.docx\n王沪宁表示，2024年是中华人民共和国成立75周年，是实现“十四五”规划目标任务的关键一年，也是人民政协成立75周年。人民政协要坚持以习近平新时代中国特色社会主义思想为指导，全面贯彻中共二十大和二十届二中全会精神，坚持党的领导、统一战线、协商民主有机结合，紧紧围绕推进中国式现代化履职尽责，推进思想政治引领，积极建言资政，广泛凝聚共识，加强自身建设，为实现全年经济社会发展目标任务汇聚智慧和力量。...\n",
+    "chunks": [
+        {
+            "page_content": "6.全国两会会议精神.docx\n全国政协十四届二次会议开幕会会议精神",
+            "metadata": {
+                "user_id": "zzp",
+                "kb_id": "KB70b80588e3614fb9ac21581d38176a05_240430",
+                "file_id": "0a9f227fffd240aeb24d99e19b8e580e",
+                "file_name": "6.全国两会会议精神.docx",
+                "nos_key": "xxx/zzp/KB70b80588e3614fb9ac21581d38176a05_240430/0a9f227fffd240aeb24d99e19b8e580e/6.全国两会会议精神.docx",
+                "file_url": null,
+                "title_lst": [],
+                "has_table": false,
+                "images_number": 0,
+                "faq_dict": {},
+                "source_info": {
+                    "page_id": 0,
+                    "pdf_nos_key": "zhiyun/docqa/qanything/local_file/zhiyun_paas_userId_test__93/KB70b80588e3614fb9ac21581d38176a05_240430/0a9f227fffd240aeb24d99e19b8e580e/6.全国两会会议精神.docx",
+                    "chunk_id": -1,
+                    "doc_id": "0a9f227fffd240aeb24d99e19b8e580e",
+                    "bbox": null
+                }
+            }
+        },
+        {
+            "page_content": "6.全国两会会议精神.docx\n中国人民政治协商会议第十四届全国委员会第二次会议4日下午在人民大会堂开幕。2000多名全国政协委员将紧紧围绕中共中央决策部署，牢记政治责任，积极建言资政，广泛凝聚共识，共同谱写中国式现代化的壮美华章。",
+            "metadata": {
+                "user_id": "zzp",
+                "kb_id": "KB70b80588e3614fb9ac21581d38176a05_240430",
+                "file_id": "0a9f227fffd240aeb24d99e19b8e580e",
+                "file_name": "6.全国两会会议精神.docx",
+                "nos_key": "xxx/zzp/KB70b80588e3614fb9ac21581d38176a05_240430/0a9f227fffd240aeb24d99e19b8e580e/6.全国两会会议精神.docx",
+                "file_url": null,
+                "title_lst": [],
+                "has_table": false,
+                "images_number": 0,
+                "faq_dict": {},
+                "source_info": {
+                    "page_id": 0,
+                    "pdf_nos_key": "zhiyun/docqa/qanything/local_file/zhiyun_paas_userId_test__93/KB70b80588e3614fb9ac21581d38176a05_240430/0a9f227fffd240aeb24d99e19b8e580e/6.全国两会会议精神.docx",
+                    "chunk_id": -1,
+                    "doc_id": "0a9f227fffd240aeb24d99e19b8e580e",
+                    "bbox": null
+                }
+            }
+        },
+        ...
+    ],
+    "page_id": 1,
+    "total_count": 102,
+}
+```
+
+## <h2><p id="更新chunkspost">更新chunks（POST）</p></h2>
+
+### <h3><p id="urlhttpyour_host8777apilocal_doc_qaupdate_chunks">URL：<http://{your_host}:8777/api/local_doc_qa/update_chunks></p></h3>
+
+### <h3><p id="更新chunks请求参数body">更新chunks请求参数（Body）</p></h3>
+
+| 参数名            | 示例参数值                                | 是否必填 | 参数类型   | 描述说明                |
+| -------------- | ------------------------------------ | ---- | ------ | ------------------- |
+| user_id        | "zzp"                                | 是    | String | 用户 id               |
+| doc_id         | "698428590b1e45108b63b943fac16559_0" | 是    | String | 修改的chunk对应的doc_id   |
+| update_content | "新的chunk内容"                          | 是    | String | 更新后的chunk文本内容       |
+| chunk_size     | 800                                  | 否    | Int    | 文本切片大小，默认8000tokens |
+
+### <h3><p id="更新chunks请求示例">更新chunks请求示例</p></h3>
+
+```python
+import requests
+import json
+
+url = "http://{your_host}:8777/api/local_doc_qa/update_chunks"
+headers = {
+    "Content-Type": "application/json"
+}
+data = {
+    "user_id": "zzp",
+    "doc_id": "698428590b1e45108b63b943fac16559_0",
+    "update_content": "新的chunk内容"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.status_code)
+print(response.text)
+```
+
+### <h3><p id="更新chunks响应示例">更新chunks响应示例</p></h3>
+
+```json
+{
+    "code": 200,
+    "msg": "success update doc_id 698428590b1e45108b63b943fac16559_0",
+}
+```
+
+## <h2><p id="获取文件base64post">获取文件base64（POST）</p></h2>
+
+### <h3><p id="urlhttpyour_host8777apilocal_doc_qaget_file_base64">URL：<http://{your_host}:8777/api/local_doc_qa/get_file_base64></p></h3>
+
+### <h3><p id="获取文件base64请求参数body">获取文件base64请求参数（Body）</p></h3>
+
+| 参数名     | 示例参数值                              | 是否必填 | 参数类型   | 描述说明  |
+| ------- | ---------------------------------- | ---- | ------ | ----- |
+| file_id | "698428590b1e45108b63b943fac16559" | 是    | String | 文件 id |
+
+### <h3><p id="获取文件base64请求示例">获取文件base64请求示例</p></h3>
+
+```python
+import requests
+import json
+
+url = "http://{your_host}:8777/api/local_doc_qa/get_file_base64"
+headers = {
+    "Content-Type": "application/json"
+}
+data = {
+    "file_id": "698428590b1e45108b63b943fac16559"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.status_code)
+print(response.text)
+```
+
+### <h3><p id="获取文件base64响应示例">获取文件base64响应示例</p></h3>
+
+```json
+{
+    "code": 200,
+    "msg": "success",
+    "file_base64": "xxx"
 }
 ```
